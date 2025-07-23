@@ -37,6 +37,13 @@ function Navigation() {
             >
               <Link to="/contact">Contact</Link>
             </Button>
+            <Button
+              variant={isActive("/api-demo") ? "default" : "ghost"}
+              asChild
+              size="sm"
+            >
+              <Link to="/api-demo">API Demo</Link>
+            </Button>
           </div>
         </div>
       </div>
