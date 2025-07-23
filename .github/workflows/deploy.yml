@@ -65,7 +65,7 @@ jobs:
           npm run build
 
   deploy-preprod:
-    needs: test
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
     name: Deploy to PREPROD
     if: github.ref == 'refs/heads/staging'
@@ -209,7 +209,7 @@ jobs:
           sudo systemctl status nginx --no-pager || echo "Nginx: non configuré"
 
   deploy-prod:
-    needs: test
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
     name: Deploy to PRODUCTION
     if: github.ref == 'refs/heads/main'
