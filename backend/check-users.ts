@@ -12,9 +12,6 @@ async function checkUsers() {
       }
     });
     
-    console.log('Users in database:');
-    console.log(users);
-    
     if (users.length === 0) {
       console.log('No users found in database. You need to register a user first.');
     }
