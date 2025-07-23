@@ -87,13 +87,19 @@ export class AuthService {
     const token = this.getToken();
     if (!token) return false;
 
-    // Check if token is expired
+    // Check if token is valid and optionally check expiration
     try {
       const payload = this.decodeToken(token);
       if (!payload) return false;
 
-      const currentTime = Date.now() / 1000;
-      return payload.exp > currentTime;
+      // If token has expiration, check if it's still valid
+      if (payload.exp) {
+        const currentTime = Date.now() / 1000;
+        return payload.exp > currentTime;
+      }
+
+      // If no expiration, consider token valid (assumes backend handles this)
+      return true;
     } catch {
       return false;
     }
