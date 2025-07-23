@@ -261,7 +261,7 @@ function Dashboard() {
                           Modifier
                         </Button>
                         <Button size="sm" variant="outline" asChild>
-                          <Link to={`/products/${product.id}`}>Voir</Link>
+                          <Link to={`/product/${product.id}`}>Voir</Link>
                         </Button>
                       </div>
                     </div>
@@ -292,7 +292,7 @@ function Dashboard() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <Link
-                          to={`/products/${comment.productId}`}
+                          to={`/product/${comment.productId}`}
                           className="font-semibold text-blue-600 hover:underline"
                         >
                           {comment.productTitle}

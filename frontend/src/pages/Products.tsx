@@ -83,7 +83,7 @@ function Products() {
               </p>
               <div className="flex justify-end mt-auto">
                 <Button asChild size="sm">
-                  <Link to={`/products/${product.id}`}>Voir détails</Link>
+                  <Link to={`/product/${product.id}`}>Voir détails</Link>
                 </Button>
               </div>
             </div>
