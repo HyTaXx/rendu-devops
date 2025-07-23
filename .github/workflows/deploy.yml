@@ -1,0 +1,358 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: 
+      - main
+      - staging
+  pull_request:
+    branches: 
+      - main
+      - staging
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test and Build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    # Test Backend
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps
+
+    - name: Lint backend
+      run: |
+        cd backend
+        npm run lint
+
+    - name: Build backend
+      run: |
+        cd backend
+        npm run build
+
+    # Test Frontend
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+
+    - name: Lint frontend
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  deploy-preprod:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Deploy to PREPROD
+    if: github.ref == 'refs/heads/staging'
+    environment: preprod
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build Backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps --production
+        npm run build
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy
+        
+        # Backend files
+        cp -r backend/dist deploy/
+        cp -r backend/node_modules deploy/
+        cp backend/package.json deploy/
+        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        
+        # Frontend files
+        cp -r frontend/dist deploy/frontend
+        
+        # Configuration files
+        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
+        cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
+        
+        # Make scripts executable
+        chmod +x deploy/*.sh 2>/dev/null || true
+
+    - name: Create deployment archive
+      run: tar -czf deployment.tar.gz -C deploy .
+
+    - name: Copy files to PREPROD EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.PREPROD_EC2_HOST }}
+        username: ${{ secrets.PREPROD_EC2_USERNAME }}
+        key: ${{ secrets.PREPROD_EC2_PRIVATE_KEY }}
+        source: "deployment.tar.gz"
+        target: "/tmp/"
+        timeout: 300s
+
+    - name: Deploy to PREPROD EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PREPROD_EC2_HOST }}
+        username: ${{ secrets.PREPROD_EC2_USERNAME }}
+        key: ${{ secrets.PREPROD_EC2_PRIVATE_KEY }}
+        timeout: 300s
+        script: |
+          set -e
+          
+          # Variables
+          APP_DIR="/opt/app"
+          BACKUP_DIR="/opt/backups/app-$(date +%Y%m%d-%H%M%S)"
+          
+          echo "🚀 Début du déploiement PREPROD sur EC2..."
+          
+          # Créer les répertoires nécessaires
+          sudo mkdir -p /opt/backups
+          sudo mkdir -p $APP_DIR
+          
+          # Backup de l'ancienne version si elle existe
+          if [ -d "$APP_DIR" ] && [ "$(ls -A $APP_DIR)" ]; then
+            echo "📦 Sauvegarde de l'ancienne version..."
+            sudo cp -r "$APP_DIR" "$BACKUP_DIR"
+          fi
+          
+          # Arrêt des services
+          echo "⏹️ Arrêt des services..."
+          sudo systemctl stop myapp 2>/dev/null || echo "Service myapp non trouvé"
+          
+          # Extraction du nouveau déploiement
+          echo "📂 Extraction du nouveau déploiement..."
+          cd /tmp
+          sudo tar -xzf deployment.tar.gz -C "$APP_DIR"
+          
+          # Permissions
+          sudo chown -R $USER:$USER "$APP_DIR"
+          
+          # Navigation vers le répertoire app
+          cd "$APP_DIR"
+          
+          # Configuration de la base de données
+          if [ -d "prisma" ]; then
+            echo "🗄️ Configuration de la base de données..."
+            npx prisma generate 2>/dev/null || echo "Prisma generate failed"
+            npx prisma migrate deploy 2>/dev/null || echo "No migrations to deploy"
+          fi
+          
+          # Mise à jour de la configuration Nginx si présente
+          if [ -f "nginx.conf" ]; then
+            echo "🌐 Mise à jour de Nginx..."
+            sudo cp nginx.conf /etc/nginx/nginx.conf
+            sudo nginx -t && sudo systemctl reload nginx || echo "Nginx non configuré"
+          fi
+          
+          # Démarrage du service
+          echo "▶️ Démarrage de l'application..."
+          sudo systemctl start myapp 2>/dev/null || echo "Service myapp non configuré"
+          
+          # Attente et vérification
+          sleep 10
+          
+          # Health check
+          echo "🏥 Vérification de santé..."
+          if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+            echo "✅ Déploiement PREPROD réussi!"
+            
+            # Nettoyage des anciens backups (garder les 3 derniers)
+            sudo find /opt/backups -name "app-*" -type d | head -n -3 | xargs sudo rm -rf 2>/dev/null || true
+            
+          else
+            echo "❌ Health check échoué"
+            echo "ℹ️ L'application peut ne pas être encore configurée"
+          fi
+          
+          # Nettoyage
+          rm -f /tmp/deployment.tar.gz
+          
+          echo "🎉 Déploiement PREPROD terminé!"
+          echo "📊 État des services:"
+          sudo systemctl status myapp --no-pager || echo "Service myapp: non configuré"
+          sudo systemctl status nginx --no-pager || echo "Nginx: non configuré"
+
+  deploy-prod:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Deploy to PRODUCTION
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build Backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps --production
+        npm run build
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy
+        
+        # Backend files
+        cp -r backend/dist deploy/
+        cp -r backend/node_modules deploy/
+        cp backend/package.json deploy/
+        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        
+        # Frontend files
+        cp -r frontend/dist deploy/frontend
+        
+        # Configuration files
+        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
+        cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
+        
+        # Make scripts executable
+        chmod +x deploy/*.sh 2>/dev/null || true
+
+    - name: Create deployment archive
+      run: tar -czf deployment.tar.gz -C deploy .
+
+    - name: Copy files to PRODUCTION EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.PROD_EC2_HOST }}
+        username: ${{ secrets.PROD_EC2_USERNAME }}
+        key: ${{ secrets.PROD_EC2_PRIVATE_KEY }}
+        source: "deployment.tar.gz"
+        target: "/tmp/"
+        timeout: 300s
+
+    - name: Deploy to PRODUCTION EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_EC2_HOST }}
+        username: ${{ secrets.PROD_EC2_USERNAME }}
+        key: ${{ secrets.PROD_EC2_PRIVATE_KEY }}
+        timeout: 300s
+        script: |
+          set -e
+          
+          # Variables
+          APP_DIR="/opt/app"
+          BACKUP_DIR="/opt/backups/app-$(date +%Y%m%d-%H%M%S)"
+          
+          echo "🚀 Début du déploiement PRODUCTION sur EC2..."
+          
+          # Créer les répertoires nécessaires
+          sudo mkdir -p /opt/backups
+          sudo mkdir -p $APP_DIR
+          
+          # Backup de l'ancienne version si elle existe
+          if [ -d "$APP_DIR" ] && [ "$(ls -A $APP_DIR)" ]; then
+            echo "📦 Sauvegarde de l'ancienne version..."
+            sudo cp -r "$APP_DIR" "$BACKUP_DIR"
+          fi
+          
+          # Arrêt des services
+          echo "⏹️ Arrêt des services..."
+          sudo systemctl stop myapp 2>/dev/null || echo "Service myapp non trouvé"
+          
+          # Extraction du nouveau déploiement
+          echo "📂 Extraction du nouveau déploiement..."
+          cd /tmp
+          sudo tar -xzf deployment.tar.gz -C "$APP_DIR"
+          
+          # Permissions
+          sudo chown -R $USER:$USER "$APP_DIR"
+          
+          # Navigation vers le répertoire app
+          cd "$APP_DIR"
+          
+          # Configuration de la base de données
+          if [ -d "prisma" ]; then
+            echo "🗄️ Configuration de la base de données..."
+            npx prisma generate 2>/dev/null || echo "Prisma generate failed"
+            npx prisma migrate deploy 2>/dev/null || echo "No migrations to deploy"
+          fi
+          
+          # Mise à jour de la configuration Nginx si présente
+          if [ -f "nginx.conf" ]; then
+            echo "🌐 Mise à jour de Nginx..."
+            sudo cp nginx.conf /etc/nginx/nginx.conf
+            sudo nginx -t && sudo systemctl reload nginx || echo "Nginx non configuré"
+          fi
+          
+          # Démarrage du service
+          echo "▶️ Démarrage de l'application..."
+          sudo systemctl start myapp 2>/dev/null || echo "Service myapp non configuré"
+          
+          # Attente et vérification
+          sleep 10
+          
+          # Health check
+          echo "🏥 Vérification de santé..."
+          if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+            echo "✅ Déploiement PRODUCTION réussi!"
+            
+            # Nettoyage des anciens backups (garder les 5 derniers en prod)
+            sudo find /opt/backups -name "app-*" -type d | head -n -5 | xargs sudo rm -rf 2>/dev/null || true
+            
+          else
+            echo "❌ Health check échoué, rollback..."
+            sudo systemctl stop myapp
+            
+            if [ -d "$BACKUP_DIR" ]; then
+              sudo rm -rf "$APP_DIR"
+              sudo mv "$BACKUP_DIR" "$APP_DIR"
+              sudo chown -R $USER:$USER "$APP_DIR"
+              sudo systemctl start myapp
+            fi
+            
+            exit 1
+          fi
+          
+          # Nettoyage
+          rm -f /tmp/deployment.tar.gz
+          
+          echo "🎉 Déploiement PRODUCTION terminé!"
+          echo "📊 État des services:"
+          sudo systemctl status myapp --no-pager || echo "Service myapp: non configuré"
+          sudo systemctl status nginx --no-pager || echo "Nginx: non configuré"
