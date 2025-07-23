@@ -27,9 +27,32 @@ const loggedUserSchema = z.object({
   ...userCore,
 });
 
+const updateUserSchema = z.object({
+  firstname: z
+    .string({
+      invalid_type_error: 'First name must be a string',
+    })
+    .min(1, 'First name must be at least 1 character long')
+    .optional(),
+  lastname: z
+    .string({
+      invalid_type_error: 'Last name must be a string',
+    })
+    .min(1, 'Last name must be at least 1 character long')
+    .optional(),
+});
+
+const userCountResponseSchema = z.object({
+  count: z.number(),
+});
+
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
 export const { schemas: userSchemas, $ref } = buildJsonSchemas(
   {
     loggedUserSchema,
+    updateUserSchema,
+    userCountResponseSchema,
   },
   {
     $id: 'UserSchemas',
