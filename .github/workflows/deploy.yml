@@ -10,15 +10,24 @@ on:
       - main
       - staging
 
-env:
-  NODE_VERSION: '18'
-
 jobs:
   test:
     runs-on: ubuntu-latest
     name: Test and Build
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+
     # Test Backend
     - name: Install backend dependencies
       run: |
