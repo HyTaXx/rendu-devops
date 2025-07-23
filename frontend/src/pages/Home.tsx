@@ -10,12 +10,15 @@ function Home() {
       <p className="text-lg text-gray-600 mb-8 text-center max-w-md">
         This is the home page of your React application with routing enabled.
       </p>
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap justify-center">
         <Button asChild>
           <Link to="/about">Go to About</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link to="/contact">Go to Contact</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link to="/api-demo">Try API Demo</Link>
         </Button>
       </div>
     </div>
