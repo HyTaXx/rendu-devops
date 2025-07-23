@@ -10,6 +10,8 @@ import authRoutes from './modules/auth/auth.route';
 import { authSchemas } from './modules/auth/auth.schema';
 import userRoutes from './modules/user/user.route';
 import { userSchemas } from './modules/user/user.schema';
+import productRoutes from './modules/product/product.route';
+import { productSchemas } from './modules/product/product.schema';
 const fastify = Fastify();
 
 // Register CORS
@@ -79,6 +81,12 @@ async function main() {
     fastify.addSchema(schema);
   }
 
+  // Register product schemas
+  for (const schema of Object.values(productSchemas)) {
+    fastify.addSchema(schema);
+  }
+
+
   // Health check route
   fastify.get('/health', async (request, reply) => {
     return {
@@ -92,6 +100,7 @@ async function main() {
   // Register routes
   fastify.register(authRoutes, { prefix: '/api/auth' });
   fastify.register(userRoutes, { prefix: '/api/users' });
+  fastify.register(productRoutes, { prefix: '/api/products' });
 
   // Add logging for debugging
   if (process.env.NODE_ENV !== 'production') {
