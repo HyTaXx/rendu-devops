@@ -1,4 +1,5 @@
 import { prisma } from '../../utils/prisma';
+import type { UpdateUserInput } from './user.schema';
 
 // Type to represent a user
 export interface User {
@@ -51,4 +52,30 @@ export async function findUserById(id: string): Promise<User | null> {
     return userWithoutPassword;
   }
   return null;
+}
+
+export async function updateUser(id: string, userData: UpdateUserInput): Promise<User | null> {
+  try {
+    // Filter out undefined values
+    const dataToUpdate = Object.fromEntries(
+      Object.entries(userData).filter(([_, value]) => value !== undefined)
+    );
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: dataToUpdate,
+    });
+
+    // Return user without password
+    const { password, ...userWithoutPassword } = updatedUser;
+    return userWithoutPassword;
+  } catch (error) {
+    // User not found or other error
+    return null;
+  }
+}
+
+export async function getUserCount(): Promise<number> {
+  const count = await prisma.user.count();
+  return count;
 }
