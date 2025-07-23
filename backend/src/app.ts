@@ -6,6 +6,8 @@ import Fastify from 'fastify';
 
 import type { UserPayload } from '../global';
 
+import authRoutes from './modules/auth/auth.route';
+import { authSchemas } from './modules/auth/auth.schema';
 import userRoutes from './modules/user/user.route';
 import { userSchemas } from './modules/user/user.schema';
 const fastify = Fastify();
@@ -25,33 +27,53 @@ fastify.register(fjwt, {
   secret: process.env.JWT_SECRET || 'your-jwt-secret',
 });
 
-fastify.decorate(
-  'authenticate',
-  async (request: FastifyRequest, reply: FastifyReply) => {
-    const token = request.cookies.accessToken;
-
-    if (!token) {
-      return reply.status(401).send({
-        message: 'Unauthorized',
-      });
-    }
-
-    const decoded = request.jwt.verify(token) as UserPayload;
-    request.user = decoded;
-  }
-);
+fastify.register(fCookies, {
+  secret: process.env.COOKIE_SECRET || 'your-cookie-secret',
+  hook: 'preHandler',
+});
 
 fastify.addHook('preHandler', (req, res, next) => {
   req.jwt = fastify.jwt;
   return next();
 });
 
-fastify.register(fCookies, {
-  secret: process.env.COOKIE_SECRET || 'your-cookie-secret',
-  hook: 'preHandler',
-});
+fastify.decorate(
+  'authenticate',
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    // Debug logging
+    console.log('Auth headers:', request.headers.authorization);
+    
+    // Check for Bearer token in Authorization header
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No Bearer token found in authorization header');
+      return reply.status(401).send({
+        message: 'Unauthorized - Bearer token required',
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('Extracted token:', token.substring(0, 20) + '...');
+
+    try {
+      const decoded = fastify.jwt.verify(token) as UserPayload;
+      request.user = decoded;
+      console.log('Token decoded successfully for user:', decoded.email);
+    } catch (error) {
+      console.log('Token verification failed:', error);
+      return reply.status(401).send({
+        message: 'Unauthorized - Invalid token',
+      });
+    }
+  }
+);
 
 async function main() {
+  // Register auth schemas
+  for (const schema of Object.values(authSchemas)) {
+    fastify.addSchema(schema);
+  }
+
   // Register user schemas
   for (const schema of Object.values(userSchemas)) {
     fastify.addSchema(schema);
@@ -68,6 +90,7 @@ async function main() {
   });
 
   // Register routes
+  fastify.register(authRoutes, { prefix: '/api/auth' });
   fastify.register(userRoutes, { prefix: '/api/users' });
 
   // Add logging for debugging
