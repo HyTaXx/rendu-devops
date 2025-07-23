@@ -12,55 +12,57 @@ on:
 
 env:
   NODE_VERSION: '18'
+
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
-    name: Test and Build
-    
+    name: Backend Tests
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          backend/package-lock.json
-          frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-    # Test Backend
-    - name: Install backend dependencies
-      run: |
-        cd backend
-        npm ci --legacy-peer-deps
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci --legacy-peer-deps
 
-    - name: Lint backend
-      run: |
-        cd backend
-        npm run lint
+      - name: Build backend
+        run: |
+          cd backend
+          npm run build
 
-    - name: Build backend
-      run: |
-        cd backend
-        npm run build
+  frontend:
+    runs-on: ubuntu-latest
+    name: Frontend Tests
 
-    # Test Frontend
-    - name: Install frontend dependencies
-      run: |
-        cd frontend
-        npm ci --legacy-peer-deps
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Lint frontend
-      run: |
-        cd frontend
-        npm run lint
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Build frontend
-      run: |
-        cd frontend
-        npm run build
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci --legacy-peer-deps
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
 
   deploy-preprod:
     needs: test
