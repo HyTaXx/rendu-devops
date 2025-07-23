@@ -22,10 +22,12 @@ function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Récupérer tous les produits et filtrer ceux de l'utilisateur
       const response = await productService.getProducts({ limit: 100 });
-      const ownProducts = response.products.filter(product => product.ownerId === user?.id);
+      const ownProducts = response.products.filter(
+        (product) => product.ownerId === user?.id
+      );
       setUserProducts(ownProducts);
     } catch (err) {
       console.error("Erreur lors du chargement des produits:", err);
@@ -43,7 +45,7 @@ function Dashboard() {
     try {
       await productService.deleteProduct(productId);
       // Mettre à jour la liste des produits
-      setUserProducts(prev => prev.filter(p => p.id !== productId));
+      setUserProducts((prev) => prev.filter((p) => p.id !== productId));
     } catch (err) {
       console.error("Erreur lors de la suppression:", err);
       alert("Erreur lors de la suppression du produit");
@@ -70,14 +72,23 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-lg font-semibold mb-2">Vos produits</h3>
-          <p className="text-2xl font-bold text-blue-600 mb-2">{userProducts.length}</p>
-          <p className="text-sm text-gray-600">Produit{userProducts.length > 1 ? 's' : ''} créé{userProducts.length > 1 ? 's' : ''}</p>
+          <p className="text-2xl font-bold text-blue-600 mb-2">
+            {userProducts.length}
+          </p>
+          <p className="text-sm text-gray-600">
+            Produit{userProducts.length > 1 ? "s" : ""} créé
+            {userProducts.length > 1 ? "s" : ""}
+          </p>
         </div>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-lg font-semibold mb-2">Rôle</h3>
-          <p className="text-lg font-medium text-green-600 mb-2">Propriétaire</p>
-          <p className="text-sm text-gray-600">Vous pouvez créer et modifier vos produits</p>
+          <p className="text-lg font-medium text-green-600 mb-2">
+            Propriétaire
+          </p>
+          <p className="text-sm text-gray-600">
+            Vous pouvez créer et modifier vos produits
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -167,23 +178,16 @@ function Dashboard() {
                       {product.description}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Créé le {new Date(product.createdAt).toLocaleDateString("fr-FR")}
+                      Créé le{" "}
+                      {new Date(product.createdAt).toLocaleDateString("fr-FR")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
+                  <Button variant="outline" size="sm" asChild>
                     <Link to={`/product/${product.id}`}>Voir</Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
+                  <Button variant="outline" size="sm" asChild>
                     <Link to={`/products/edit/${product.id}`}>Modifier</Link>
                   </Button>
                   <Button
@@ -215,7 +219,7 @@ function Dashboard() {
           <li>Voir tous les produits disponibles</li>
         </ul>
         <p className="text-sm text-blue-700 mt-4">
-          Note: Les utilisateurs standards peuvent commenter tous les produits, 
+          Note: Les utilisateurs standards peuvent commenter tous les produits,
           mais cette fonctionnalité sera disponible prochainement.
         </p>
       </div>

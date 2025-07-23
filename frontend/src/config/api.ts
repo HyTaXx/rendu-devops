@@ -7,7 +7,7 @@ export const API_CONFIG = {
     users: "/users",
     posts: "/posts",
     auth: "/auth",
-    // Example: products: '/products',
+    products: "/products",
   },
 } as const;
 

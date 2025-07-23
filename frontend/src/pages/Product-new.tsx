@@ -95,8 +95,14 @@ function Product() {
               </h1>
               {isOwner && (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/products/edit/${product.id}`}>Modifier</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      alert("Fonctionnalité de modification à implémenter")
+                    }
+                  >
+                    Modifier
                   </Button>
                   <Button
                     variant="destructive"
