@@ -16,7 +16,7 @@ env:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    name: Backend Tests
+    name: Backend Build
 
     steps:
       - name: Checkout code
@@ -39,9 +39,19 @@ jobs:
           cd backend
           npm run build
 
+      - name: Upload backend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            backend/dist
+            backend/node_modules
+            backend/package.json
+            backend/prisma
+
   frontend:
     runs-on: ubuntu-latest
-    name: Frontend Tests
+    name: Frontend Build
 
     steps:
       - name: Checkout code
@@ -64,6 +74,12 @@ jobs:
           cd frontend
           npm run build
 
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
   deploy-preprod:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
@@ -75,22 +91,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        name: backend-build
+        path: backend
 
-    - name: Build Backend
-      run: |
-        cd backend
-        npm ci --legacy-peer-deps --production
-        npm run build
-
-    - name: Build Frontend
-      run: |
-        cd frontend
-        npm ci --legacy-peer-deps
-        npm run build
+    - name: Download frontend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend
 
     - name: Create deployment package
       run: |
@@ -166,6 +177,16 @@ jobs:
           # Navigation vers le répertoire app
           cd "$APP_DIR"
           
+          # Configuration des variables d'environnement
+          echo "🔧 Configuration des variables d'environnement..."
+          cat > .env << EOF
+          DATABASE_URL="${{ secrets.PREPROD_DB_URL }}"
+          JWT_SECRET="${{ secrets.PREPROD_JWT_SECRET }}"
+          CORS_ORIGINS="${{ secrets.PREPROD_CORS_ORIGINS }}"
+          NODE_ENV=production
+          PORT=3000
+          EOF
+          
           # Configuration de la base de données
           if [ -d "prisma" ]; then
             echo "🗄️ Configuration de la base de données..."
@@ -180,9 +201,15 @@ jobs:
             sudo nginx -t && sudo systemctl reload nginx || echo "Nginx non configuré"
           fi
           
-          # Démarrage du service
-          echo "▶️ Démarrage de l'application..."
-          sudo systemctl start myapp 2>/dev/null || echo "Service myapp non configuré"
+          # Redémarrage services
+          if systemctl list-units --full -all | grep -Fq "myapp.service"; then
+            echo "🔄 Redémarrage du service existant..."
+            sudo systemctl restart myapp
+          else
+            echo "⚠️ Service myapp non trouvé - démarrage manuel nécessaire"
+            sudo systemctl start myapp || echo "Service myapp non configuré"
+            # Ici on pourrait lancer l'app directement : node dist/app.js &
+          fi
           
           # Attente et vérification
           sleep 10
@@ -219,22 +246,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        name: backend-build
+        path: backend
 
-    - name: Build Backend
-      run: |
-        cd backend
-        npm ci --legacy-peer-deps --production
-        npm run build
-
-    - name: Build Frontend
-      run: |
-        cd frontend
-        npm ci --legacy-peer-deps
-        npm run build
+    - name: Download frontend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend
 
     - name: Create deployment package
       run: |
@@ -310,6 +332,16 @@ jobs:
           # Navigation vers le répertoire app
           cd "$APP_DIR"
           
+          # Configuration des variables d'environnement
+          echo "🔧 Configuration des variables d'environnement..."
+          cat > .env << EOF
+          DATABASE_URL="${{ secrets.PROD_DB_URL }}"
+          JWT_SECRET="${{ secrets.PROD_JWT_SECRET }}"
+          CORS_ORIGINS="${{ secrets.PROD_CORS_ORIGINS }}"
+          NODE_ENV=production
+          PORT=3000
+          EOF
+          
           # Configuration de la base de données
           if [ -d "prisma" ]; then
             echo "🗄️ Configuration de la base de données..."
@@ -324,9 +356,15 @@ jobs:
             sudo nginx -t && sudo systemctl reload nginx || echo "Nginx non configuré"
           fi
           
-          # Démarrage du service
-          echo "▶️ Démarrage de l'application..."
-          sudo systemctl start myapp 2>/dev/null || echo "Service myapp non configuré"
+          # Redémarrage services
+          if systemctl list-units --full -all | grep -Fq "myapp.service"; then
+            echo "🔄 Redémarrage du service existant..."
+            sudo systemctl restart myapp
+          else
+            sudo systemctl start myapp || echo "Service myapp non configuré"
+            echo "⚠️ Service myapp non trouvé - démarrage manuel nécessaire"
+            
+          fi
           
           # Attente et vérification
           sleep 10
@@ -347,7 +385,15 @@ jobs:
               sudo rm -rf "$APP_DIR"
               sudo mv "$BACKUP_DIR" "$APP_DIR"
               sudo chown -R $USER:$USER "$APP_DIR"
-              sudo systemctl start myapp
+              
+              # Redémarrage du service de rollback
+              if systemctl list-units --full -all | grep -Fq "myapp.service"; then
+                echo "🔄 Redémarrage du service après rollback..."
+                sudo systemctl restart myapp
+              else
+                sudo systemctl start myapp || echo "Service myapp non configuré"
+                echo "⚠️ Service myapp non trouvé pour le rollback"
+              fi
             fi
             
             exit 1
