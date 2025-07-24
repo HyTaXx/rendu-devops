@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy to PRODUCTION
     if: github.ref == 'refs/heads/main'
-    environment: production
+    environment: prod
     
     steps:
     - name: Checkout code
