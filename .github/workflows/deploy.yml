@@ -5,10 +5,12 @@ on:
     branches: 
       - main
       - staging
+      - feat/ci_cd
   pull_request:
     branches: 
       - main
       - staging
+      - feat/ci_cd
 
 env:
   NODE_VERSION: '18'
