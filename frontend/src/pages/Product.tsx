@@ -4,6 +4,7 @@ import { useProduct } from "@/hooks/useProducts";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { productService } from "@/services/product";
+import ReviewList from "@/components/ReviewList";
 
 function Product() {
   const { id } = useParams<{ id: string }>();
@@ -146,23 +147,11 @@ function Product() {
               </div>
             </div>
 
-            {/* Section commentaires (placeholder) */}
-            <div className="mt-8 pt-6 border-t">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900">
-                Commentaires
-              </h2>
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <p className="text-gray-600">
-                  La section commentaires sera disponible prochainement.
-                </p>
-                {user && !isOwner && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    En tant qu'utilisateur standard, vous pourrez commenter ce
-                    produit.
-                  </p>
-                )}
-              </div>
-            </div>
+            {/* Section commentaires */}
+            <ReviewList
+              productId={product.id}
+              productOwnerId={product.ownerId}
+            />
           </div>
         </div>
       </div>
