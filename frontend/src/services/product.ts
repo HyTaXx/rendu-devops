@@ -33,10 +33,11 @@ export const productService = {
   },
 
   // Create new product (only for authenticated users)
-  createProduct: async (data: CreateProductData): Promise<Product> => {
+  createProduct: async (data: FormData): Promise<Product> => {
     const response = await httpClient.post<Product>(
       API_CONFIG.ENDPOINTS.products,
-      data
+      data,
+      true
     );
     return response as unknown as Product;
   },
@@ -44,11 +45,12 @@ export const productService = {
   // Update product (only for product owner)
   updateProduct: async (
     id: string,
-    data: UpdateProductData
+    data: FormData
   ): Promise<Product> => {
     const response = await httpClient.put<Product>(
       `${API_CONFIG.ENDPOINTS.products}/${id}`,
-      data
+      data,
+      true
     );
     return response as unknown as Product;
   },

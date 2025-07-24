@@ -26,16 +26,28 @@ class HttpClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isFormData: boolean = false
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
+    let headers: Record<string, string> = {};
+
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (options.headers && typeof options.headers === "object") {
+      headers = { ...options.headers as Record<string, string> };
+    }
+
+    if (!isFormData) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const config: RequestInit = {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
       signal: AbortSignal.timeout(this.timeout),
     };
 
@@ -78,18 +90,26 @@ class HttpClient {
     return this.request<T>(endpoint, { method: "GET" });
   }
 
-  async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  async post<T>(endpoint: string, data?: unknown, isFormData: boolean = false): Promise<ApiResponse<T>> {
+    return this.request<T>(
+      endpoint,
+      {
+        method: "POST",
+        body: isFormData ? (data as FormData) : data ? JSON.stringify(data) : undefined,
+      },
+      isFormData
+    );
   }
 
-  async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  async put<T>(endpoint: string, data?: unknown, isFormData: boolean = false): Promise<ApiResponse<T>> {
+    return this.request<T>(
+      endpoint,
+      {
+        method: "PUT",
+        body: isFormData ? (data as FormData) : data ? JSON.stringify(data) : undefined,
+      },
+      isFormData
+    );
   }
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {

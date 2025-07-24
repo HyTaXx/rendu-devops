@@ -2,11 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { $ref } from './product.schema';
 import { $ref as $refReview } from '../review/review.schema';
 import {
-  createProductHandler,
   getProductsHandler,
   getProductByIdHandler,
-  updateProductHandler,
   deleteProductHandler,
+  createProductHandler,
 } from './product.controller';
 import {
   createReviewHandler,
@@ -34,8 +33,8 @@ async function productRoutes(fastify: FastifyInstance) {
     '/',
     {
       onRequest: [fastify.authenticate],
+      // Accept multipart/form-data, skip strict body validation
       schema: {
-        body: $ref('createProductSchema'),
         response: {
           201: $ref('productResponseSchema'),
         },
@@ -59,21 +58,21 @@ async function productRoutes(fastify: FastifyInstance) {
   );
 
   // Update product - PUT /api/products/:id (protected route, owner only)
-  fastify.put(
-    '/:id',
-    {
-      onRequest: [fastify.authenticate],
-      schema: {
-        params: $ref('productParamsSchema'),
-        body: $ref('updateProductSchema'),
-        response: {
-          200: $ref('productResponseSchema'),
-        },
-      },
-    },
-    updateProductHandler
-  );
-
+  // Update product - PUT /api/products/:id (protected route, owner only)
+  // fastify.put(
+  //   '/:id',
+  //   {
+  //     onRequest: [fastify.authenticate],
+  //     // Accept multipart/form-data, skip strict body validation
+  //     schema: {
+  //       params: $ref('productParamsSchema'),
+  //       response: {
+  //         200: $ref('productResponseSchema'),
+  //       },
+  //     },
+  //   },
+  //   updateProductHandler
+  // );
   // Delete product - DELETE /api/products/:id (protected route, owner only)
   fastify.delete(
     '/:id',
