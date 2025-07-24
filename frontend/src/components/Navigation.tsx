@@ -58,6 +58,14 @@ function Navigation() {
                     <Link to="/dashboard">Dashboard</Link>
                   </Button>
 
+                  <Button
+                    variant={isActive("/products/new") ? "default" : "outline"}
+                    asChild
+                    size="sm"
+                  >
+                    <Link to="/products/new">+ Ajouter produit</Link>
+                  </Button>
+
                   <div className="flex items-center gap-2 ml-4">
                     <span className="text-sm text-gray-600">
                       Welcome, {user?.firstname}!

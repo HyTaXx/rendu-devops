@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Home from "@/pages/Home";
 import Products from "@/pages/Products";
 import Product from "@/pages/Product";
+import ProductForm from "@/pages/ProductForm";
 import Dashboard from "@/pages/Dashboard";
 
 function App() {
@@ -18,6 +19,22 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
               <Route path="/product/:id" element={<Product />} />
+              <Route
+                path="/products/new"
+                element={
+                  <ProtectedRoute>
+                    <ProductForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/products/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <ProductForm />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/dashboard"
                 element={

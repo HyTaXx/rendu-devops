@@ -36,6 +36,11 @@ export const userService = {
   deleteUser: (id: string): Promise<ApiResponse<void>> => {
     return httpClient.delete<void>(`${API_CONFIG.ENDPOINTS.users}/${id}`);
   },
+
+  // Get user count
+  getUserCount: (): Promise<{ count: number; timestamp: string }> => {
+    return httpClient.get<{ count: number; timestamp: string }>(`${API_CONFIG.ENDPOINTS.users}/count`) as unknown as Promise<{ count: number; timestamp: string }>;
+  },
 };
 
 // Post API service

@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { uploadToS3 } from '../../utils/s3';
 import {
   createProduct,
   findProducts,
@@ -6,53 +7,7 @@ import {
   updateProduct,
   deleteProduct,
 } from './product.service';
-import type {
-  CreateProductInput,
-  UpdateProductInput,
-  ProductParamsInput,
-  ProductQueryInput,
-} from './product.schema';
-
-export async function createProductHandler(
-  request: FastifyRequest<{
-    Body: CreateProductInput;
-  }>,
-  reply: FastifyReply
-) {
-  try {
-    const ownerId = request.user.id;
-    const productData = request.body;
-
-    console.log('Creating product with ownerId:', ownerId);
-    console.log('Product data:', productData);
-
-    const newProduct = await createProduct(productData, ownerId);
-
-    reply.status(201).send(newProduct);
-  } catch (error) {
-    console.error('Error creating product:', error);
-    
-    // Handle user not found error
-    if (error instanceof Error && error.message.includes('does not exist')) {
-      return reply.status(400).send({
-        message: 'Invalid user. Please ensure you are properly authenticated.',
-        error: 'User not found'
-      });
-    }
-    
-    // Handle foreign key constraint violation specifically
-    if (error instanceof Error && 'code' in error && error.code === 'P2003') {
-      return reply.status(400).send({
-        message: 'Invalid user. Please ensure you are properly authenticated.',
-        error: 'Foreign key constraint violation'
-      });
-    }
-    
-    reply.status(500).send({
-      message: 'Internal Server Error',
-    });
-  }
-}
+import type { ProductQueryInput, ProductParamsInput } from './product.schema';
 
 export async function getProductsHandler(
   request: FastifyRequest<{
@@ -109,40 +64,38 @@ export async function getProductByIdHandler(
   }
 }
 
-export async function updateProductHandler(
-  request: FastifyRequest<{
-    Params: ProductParamsInput;
-    Body: UpdateProductInput;
-  }>,
-  reply: FastifyReply
-) {
+export async function createProductHandler(request: any, reply: any) {
   try {
-    const { id } = request.params;
     const ownerId = request.user.id;
-    const productData = request.body;
+    let body: any = {};
+    let imageUrl: string | undefined = undefined;
 
-    // Vérifier qu'au moins un champ est fourni pour la mise à jour
-    if (
-      productData.title === undefined && 
-      productData.description === undefined && 
-      productData.imageUrl === undefined
-    ) {
-      return reply.status(400).send({
-        message: 'At least one field must be provided for update',
-      });
+    if (request.isMultipart && request.isMultipart()) {
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === 'file' && part.fieldname === 'image') {
+          const buffers = [];
+          for await (const chunk of part.file) {
+            buffers.push(chunk);
+          }
+          const fileBuffer = Buffer.concat(buffers);
+          imageUrl = await uploadToS3(fileBuffer, part.filename, part.mimetype);
+        } else if (part.type === 'field') {
+          body[part.fieldname] = part.value;
+        }
+      }
+    } else {
+      body = request.body;
     }
 
-    const updatedProduct = await updateProduct(id, productData, ownerId);
-
-    if (!updatedProduct) {
-      return reply.status(404).send({
-        message: 'Product not found or you are not authorized to update this product',
-      });
+    if (imageUrl) {
+      body.imageUrl = imageUrl;
     }
 
-    reply.send(updatedProduct);
+    const newProduct = await createProduct(body, ownerId);
+    reply.status(201).send(newProduct);
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('Error creating product:', error);
     reply.status(500).send({
       message: 'Internal Server Error',
     });
@@ -170,6 +123,52 @@ export async function deleteProductHandler(
     reply.status(204).send();
   } catch (error) {
     console.error('Error deleting product:', error);
+    reply.status(500).send({
+      message: 'Internal Server Error',
+    });
+  }
+}
+
+export async function updateProductHandler(request: any, reply: any) {
+  try {
+    const { id } = request.params;
+    const ownerId = request.user.id;
+    let body: any = {};
+    let imageUrl: string | undefined = undefined;
+
+    if (request.isMultipart && request.isMultipart()) {
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === 'file' && part.fieldname === 'image') {
+          const buffers = [];
+          for await (const chunk of part.file) {
+            buffers.push(chunk);
+          }
+          const fileBuffer = Buffer.concat(buffers);
+          imageUrl = await uploadToS3(fileBuffer, part.filename, part.mimetype);
+        } else if (part.type === 'field') {
+          body[part.fieldname] = part.value;
+        }
+      }
+    } else {
+      body = request.body;
+    }
+
+    if (imageUrl) {
+      body.imageUrl = imageUrl;
+    }
+
+    const updatedProduct = await updateProduct(id, body, ownerId);
+
+    if (!updatedProduct) {
+      return reply.status(404).send({
+        message: 'Product not found or you are not authorized to update this product',
+      });
+    }
+
+    reply.send(updatedProduct);
+  } catch (error) {
+    console.error('Error updating product:', error);
     reply.status(500).send({
       message: 'Internal Server Error',
     });

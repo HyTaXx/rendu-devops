@@ -1,15 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-
-// Mock data pour les statistiques
-const mockStats = {
-  totalUsers: 1247,
-  totalProducts: 856,
-};
+import { useStats } from "@/hooks/useStats";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { useState } from "react";
 
 function Home() {
   const { isAuthenticated, user } = useAuth();
+  const { stats, loading: statsLoading, error: statsError } = useStats();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  const openAuthModal = (mode: "login" | "register") => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -26,15 +31,15 @@ function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-md border">
               <h3 className="text-2xl font-semibold text-blue-600 mb-2">
-                {mockStats.totalUsers}
+                {statsLoading ? "..." : statsError ? "N/A" : stats.totalUsers}
               </h3>
-              <p className="text-gray-600">Utilisateurs actifs</p>
+              <p className="text-gray-600">Utilisateurs inscrits</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border">
               <h3 className="text-2xl font-semibold text-green-600 mb-2">
-                {mockStats.totalProducts}
+                {statsLoading ? "..." : statsError ? "N/A" : stats.totalProducts}
               </h3>
-              <p className="text-gray-600">Produits disponibles</p>
+              <p className="text-gray-600">Produits créés</p>
             </div>
           </div>
 
@@ -54,9 +59,22 @@ function Home() {
                   <Link to="/dashboard">Mon Dashboard</Link>
                 </Button>
               ) : (
-                <p className="text-sm text-gray-500 flex items-center">
-                  Connectez-vous pour accéder à plus de fonctionnalités
-                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => openAuthModal("login")}
+                  >
+                    Se connecter
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => openAuthModal("register")}
+                  >
+                    S'inscrire
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -129,6 +147,13 @@ function Home() {
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authMode}
+      />
     </div>
   );
 }

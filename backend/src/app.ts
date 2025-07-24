@@ -1,4 +1,5 @@
 import fCookies from '@fastify/cookie';
+import fMultipart from '@fastify/multipart';
 import fCors from '@fastify/cors';
 import fjwt from '@fastify/jwt';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -12,8 +13,11 @@ import userRoutes from './modules/user/user.route';
 import { userSchemas } from './modules/user/user.schema';
 import productRoutes from './modules/product/product.route';
 import { productSchemas } from './modules/product/product.schema';
+import { reviewSchemas } from './modules/review/review.schema';
 const fastify = Fastify();
 
+// Register multipart for file uploads
+fastify.register(fMultipart);
 // Register CORS
 fastify.register(fCors, {
   origin: process.env.CORS_ORIGINS?.split(',') || [
@@ -83,6 +87,11 @@ async function main() {
 
   // Register product schemas
   for (const schema of Object.values(productSchemas)) {
+    fastify.addSchema(schema);
+  }
+
+  // Register review schemas
+  for (const schema of Object.values(reviewSchemas)) {
     fastify.addSchema(schema);
   }
 
