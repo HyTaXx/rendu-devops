@@ -1,4 +1,5 @@
 import fCookies from '@fastify/cookie';
+import fMultipart from '@fastify/multipart';
 import fCors from '@fastify/cors';
 import fjwt from '@fastify/jwt';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -15,6 +16,8 @@ import { productSchemas } from './modules/product/product.schema';
 import { reviewSchemas } from './modules/review/review.schema';
 const fastify = Fastify();
 
+// Register multipart for file uploads
+fastify.register(fMultipart);
 // Register CORS
 fastify.register(fCors, {
   origin: process.env.CORS_ORIGINS?.split(',') || [

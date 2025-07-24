@@ -2,11 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { $ref } from './product.schema';
 import { $ref as $refReview } from '../review/review.schema';
 import {
-  createProductHandler,
   getProductsHandler,
   getProductByIdHandler,
-  updateProductHandler,
   deleteProductHandler,
+  createProductHandler,
+  updateProductHandler,
 } from './product.controller';
 import {
   createReviewHandler,
@@ -34,8 +34,8 @@ async function productRoutes(fastify: FastifyInstance) {
     '/',
     {
       onRequest: [fastify.authenticate],
+      // Accept multipart/form-data, skip strict body validation
       schema: {
-        body: $ref('createProductSchema'),
         response: {
           201: $ref('productResponseSchema'),
         },
@@ -63,9 +63,9 @@ async function productRoutes(fastify: FastifyInstance) {
     '/:id',
     {
       onRequest: [fastify.authenticate],
+      // Accept multipart/form-data, skip strict body validation
       schema: {
         params: $ref('productParamsSchema'),
-        body: $ref('updateProductSchema'),
         response: {
           200: $ref('productResponseSchema'),
         },

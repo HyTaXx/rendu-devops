@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { productService } from "@/services/product";
@@ -10,11 +10,12 @@ function ProductForm() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
-  const [formData, setFormData] = useState<CreateProductData>({
+  const [formData, setFormData] = useState<Omit<CreateProductData, 'imageUrl'>>({
     title: "",
     description: "",
-    imageUrl: "",
   });
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +37,8 @@ function ProductForm() {
       setFormData({
         title: product.title,
         description: product.description,
-        imageUrl: product.imageUrl || "",
       });
+      // No file prefill for edit
     } catch (err) {
       console.error("Erreur lors du chargement du produit:", err);
       setError("Erreur lors du chargement du produit");
@@ -67,23 +68,24 @@ function ProductForm() {
       return;
     }
 
+    if (!isEdit && !file) {
+      setError("L'image du produit est obligatoire");
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
-      const productData = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        imageUrl: (formData.imageUrl && formData.imageUrl.trim()) || null,
-      };
+      const form = new FormData();
+      form.append("title", formData.title.trim());
+      form.append("description", formData.description.trim());
+      if (file) form.append("image", file);
 
       if (isEdit && id) {
-        await productService.updateProduct(
-          id,
-          productData as UpdateProductData
-        );
+        await productService.updateProduct(id, form);
       } else {
-        await productService.createProduct(productData);
+        await productService.createProduct(form);
       }
 
       navigate("/products");
@@ -107,6 +109,12 @@ function ProductForm() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
   if (!isAuthenticated) {
@@ -142,7 +150,7 @@ function ProductForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
         <div>
           <label
             htmlFor="title"
@@ -183,22 +191,22 @@ function ProductForm() {
 
         <div>
           <label
-            htmlFor="imageUrl"
+            htmlFor="image"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            URL de l'image (optionnel)
+            Image du produit {isEdit ? "(laisser vide pour ne pas changer)" : "*"}
           </label>
           <input
-            type="url"
-            id="imageUrl"
-            name="imageUrl"
-            value={formData.imageUrl || ""}
-            onChange={handleInputChange}
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="https://exemple.com/image.jpg"
           />
           <p className="text-sm text-gray-500 mt-1">
-            Ajoutez une URL d'image pour illustrer votre produit
+            {isEdit ? "Vous pouvez laisser vide pour garder l'image actuelle." : "Ajoutez une image pour illustrer votre produit (obligatoire)"}
           </p>
         </div>
 
