@@ -61,11 +61,7 @@ jobs:
         cp -r frontend/dist deploy/frontend
         
         # Configuration files
-        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
         cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
-        
-        # Make scripts executable
-        chmod +x deploy/*.sh 2>/dev/null || true
 
     - name: Create deployment archive
       run: tar -czf deployment.tar.gz -C deploy .
@@ -120,6 +116,17 @@ jobs:
           
           # Navigation vers le répertoire app
           cd "$APP_DIR"
+          
+          # Vérification et installation de Node.js si nécessaire
+          echo "🔍 Vérification de Node.js..."
+          if ! command -v node &> /dev/null; then
+            echo "📦 Installation de Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs || sudo dnf install -y nodejs npm
+          fi
+          
+          echo "✅ Node.js version: $(node --version)"
+          echo "✅ NPM version: $(npm --version)"
           
           # Configuration des variables d'environnement
           echo "🔧 Configuration des variables d'environnement..."
@@ -224,11 +231,7 @@ jobs:
         cp -r frontend/dist deploy/frontend
         
         # Configuration files
-        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
         cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
-        
-        # Make scripts executable
-        chmod +x deploy/*.sh 2>/dev/null || true
 
     - name: Create deployment archive
       run: tar -czf deployment.tar.gz -C deploy .
@@ -283,6 +286,17 @@ jobs:
           
           # Navigation vers le répertoire app
           cd "$APP_DIR"
+          
+          # Vérification et installation de Node.js si nécessaire
+          echo "🔍 Vérification de Node.js..."
+          if ! command -v node &> /dev/null; then
+            echo "📦 Installation de Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs || sudo dnf install -y nodejs npm
+          fi
+          
+          echo "✅ Node.js version: $(node --version)"
+          echo "✅ NPM version: $(npm --version)"
           
           # Configuration des variables d'environnement
           echo "🔧 Configuration des variables d'environnement..."
