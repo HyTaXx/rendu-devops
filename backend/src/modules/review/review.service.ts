@@ -130,7 +130,7 @@ export async function findReviewsByProductId(
   const totalPages = Math.ceil(total / limit);
 
   // Transform the response to match our interface
-  const transformedReviews = reviews.map(review => ({
+  const transformedReviews = reviews.map((review: any) => ({
     id: review.id,
     text: review.text,
     rating: review.rating,
@@ -184,7 +184,7 @@ export async function findReviewsByUserId(
   const totalPages = Math.ceil(total / limit);
 
   // Transform the response to match our interface
-  const transformedReviews = reviews.map(review => ({
+  const transformedReviews = reviews.map((review: any) => ({
     id: review.id,
     text: review.text,
     rating: review.rating,
