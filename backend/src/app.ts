@@ -12,6 +12,7 @@ import userRoutes from './modules/user/user.route';
 import { userSchemas } from './modules/user/user.schema';
 import productRoutes from './modules/product/product.route';
 import { productSchemas } from './modules/product/product.schema';
+import { reviewSchemas } from './modules/review/review.schema';
 const fastify = Fastify();
 
 // Register CORS
@@ -83,6 +84,11 @@ async function main() {
 
   // Register product schemas
   for (const schema of Object.values(productSchemas)) {
+    fastify.addSchema(schema);
+  }
+
+  // Register review schemas
+  for (const schema of Object.values(reviewSchemas)) {
     fastify.addSchema(schema);
   }
 

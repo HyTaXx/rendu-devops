@@ -38,6 +38,7 @@ model Product {
 model Review {
   id        String   @id @default(cuid())
   text      String
+  rating    Int      @default(5) @db.SmallInt // 1-5 rating
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   productId String

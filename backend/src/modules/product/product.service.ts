@@ -1,12 +1,28 @@
 import { prisma } from '../../utils/prisma';
 import type { CreateProductInput, UpdateProductInput } from './product.schema';
 
+// Helper function to calculate average rating for a product
+async function calculateAverageRating(productId: string): Promise<number | null> {
+  const ratings = await prisma.review.findMany({
+    where: { productId },
+    select: { rating: true },
+  });
+
+  if (ratings.length === 0) {
+    return null;
+  }
+
+  const sum = ratings.reduce((acc, review) => acc + review.rating, 0);
+  return Math.round((sum / ratings.length) * 10) / 10; // Round to 1 decimal place
+}
+
 export interface Product {
   id: string;
   title: string;
   description: string;
   imageUrl: string | null;
   ownerId: string;
+  averageRating: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,7 +64,12 @@ export async function createProduct(
     data: createData,
   });
 
-  return newProduct;
+  const averageRating = await calculateAverageRating(newProduct.id);
+
+  return {
+    ...newProduct,
+    averageRating,
+  };
 }
 
 export async function findProducts(
@@ -68,10 +89,18 @@ export async function findProducts(
     prisma.product.count(),
   ]);
 
+  // Add average rating to each product
+  const productsWithRating = await Promise.all(
+    products.map(async (product) => ({
+      ...product,
+      averageRating: await calculateAverageRating(product.id),
+    }))
+  );
+
   const totalPages = Math.ceil(total / limit);
 
   return {
-    products,
+    products: productsWithRating,
     total,
     page,
     limit,
@@ -84,7 +113,16 @@ export async function findProductById(id: string): Promise<Product | null> {
     where: { id },
   });
 
-  return product;
+  if (!product) {
+    return null;
+  }
+
+  const averageRating = await calculateAverageRating(product.id);
+
+  return {
+    ...product,
+    averageRating,
+  };
 }
 
 export async function updateProduct(
@@ -113,7 +151,12 @@ export async function updateProduct(
     },
   });
 
-  return updatedProduct;
+  const averageRating = await calculateAverageRating(updatedProduct.id);
+
+  return {
+    ...updatedProduct,
+    averageRating,
+  };
 }
 
 export async function deleteProduct(

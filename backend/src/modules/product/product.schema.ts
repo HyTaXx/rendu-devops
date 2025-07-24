@@ -38,6 +38,7 @@ const productResponseSchema = z.object({
   description: z.string(),
   imageUrl: z.string().nullable(),
   ownerId: z.string(),
+  averageRating: z.number().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
