@@ -5,12 +5,11 @@ on:
     branches: 
       - main
       - staging
-      - feat/ci_cd
   pull_request:
     branches: 
       - main
       - staging
-      - feat/ci_cd
+
 
 env:
   NODE_VERSION: '18'
@@ -19,7 +18,7 @@ jobs:
   deploy-preprod:
     runs-on: ubuntu-latest
     name: Build and Deploy to PREPROD
-    if: github.ref == 'refs/heads/feat/ci_cd'
+    if: github.ref == 'refs/heads/staging'
     environment: preprod
     
     steps:
