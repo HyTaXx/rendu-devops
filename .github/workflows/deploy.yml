@@ -16,78 +16,9 @@ env:
   NODE_VERSION: '18'
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    name: Backend Build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          npm ci --legacy-peer-deps
-
-      - name: Build backend
-        run: |
-          cd backend
-          npm run build
-
-      - name: Upload backend artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-build
-          path: |
-            backend/dist
-            backend/node_modules
-            backend/package.json
-            backend/prisma
-          retention-days: 1
-
-  frontend:
-    runs-on: ubuntu-latest
-    name: Frontend Build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci --legacy-peer-deps
-
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-
-      - name: Upload frontend artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/dist
-          retention-days: 1
-
   deploy-preprod:
-    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    name: Deploy to PREPROD
+    name: Build and Deploy to PREPROD
     if: github.ref == 'refs/heads/feat/ci_cd'
     environment: preprod
     
@@ -95,30 +26,39 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download backend artifacts
-      uses: actions/download-artifact@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        name: backend-build
-        path: backend-artifacts
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
-    - name: Download frontend artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend-artifacts
+    - name: Install and build backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Install and build frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
 
     - name: Create deployment package
       run: |
         mkdir -p deploy
         
-        # Backend files (artifacts are downloaded with the backend/ prefix)
-        cp -r backend-artifacts/backend/dist deploy/
-        cp -r backend-artifacts/backend/node_modules deploy/
-        cp backend-artifacts/backend/package.json deploy/
-        cp -r backend-artifacts/backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        # Backend files
+        cp -r backend/dist deploy/
+        cp -r backend/node_modules deploy/
+        cp backend/package.json deploy/
+        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
         
         # Frontend files
-        cp -r frontend-artifacts deploy/frontend
+        cp -r frontend/dist deploy/frontend
         
         # Configuration files
         cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
@@ -240,9 +180,8 @@ jobs:
           sudo systemctl status nginx --no-pager || echo "Nginx: non configuré"
 
   deploy-prod:
-    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    name: Deploy to PRODUCTION
+    name: Build and Deploy to PRODUCTION
     if: github.ref == 'refs/heads/main'
     environment: production
     
@@ -250,30 +189,39 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download backend artifacts
-      uses: actions/download-artifact@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        name: backend-build
-        path: backend-artifacts
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
-    - name: Download frontend artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend-artifacts
+    - name: Install and build backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Install and build frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
 
     - name: Create deployment package
       run: |
         mkdir -p deploy
         
-        # Backend files (artifacts are downloaded with the backend/ prefix)
-        cp -r backend-artifacts/backend/dist deploy/
-        cp -r backend-artifacts/backend/node_modules deploy/
-        cp backend-artifacts/backend/package.json deploy/
-        cp -r backend-artifacts/backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        # Backend files
+        cp -r backend/dist deploy/
+        cp -r backend/node_modules deploy/
+        cp backend/package.json deploy/
+        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
         
         # Frontend files
-        cp -r frontend-artifacts deploy/frontend
+        cp -r frontend/dist deploy/frontend
         
         # Configuration files
         cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
