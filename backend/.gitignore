@@ -6,3 +6,4 @@ node_modules
 backup_db/*.sql
 
 /src/generated/prisma
+dist/
