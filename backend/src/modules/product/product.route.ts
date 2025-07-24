@@ -6,6 +6,7 @@ import {
   getProductByIdHandler,
   deleteProductHandler,
   createProductHandler,
+  updateProductHandler,
 } from './product.controller';
 import {
   createReviewHandler,
@@ -58,21 +59,21 @@ async function productRoutes(fastify: FastifyInstance) {
   );
 
   // Update product - PUT /api/products/:id (protected route, owner only)
-  // Update product - PUT /api/products/:id (protected route, owner only)
-  // fastify.put(
-  //   '/:id',
-  //   {
-  //     onRequest: [fastify.authenticate],
-  //     // Accept multipart/form-data, skip strict body validation
-  //     schema: {
-  //       params: $ref('productParamsSchema'),
-  //       response: {
-  //         200: $ref('productResponseSchema'),
-  //       },
-  //     },
-  //   },
-  //   updateProductHandler
-  // );
+  fastify.put(
+    '/:id',
+    {
+      onRequest: [fastify.authenticate],
+      // Accept multipart/form-data, skip strict body validation
+      schema: {
+        params: $ref('productParamsSchema'),
+        response: {
+          200: $ref('productResponseSchema'),
+        },
+      },
+    },
+    updateProductHandler
+  );
+
   // Delete product - DELETE /api/products/:id (protected route, owner only)
   fastify.delete(
     '/:id',
