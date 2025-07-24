@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { $ref } from './product.schema';
+import { $ref as $refReview } from '../review/review.schema';
 import {
   createProductHandler,
   getProductsHandler,
@@ -7,6 +8,11 @@ import {
   updateProductHandler,
   deleteProductHandler,
 } from './product.controller';
+import {
+  createReviewHandler,
+  getProductReviewsHandler,
+  deleteReviewHandler,
+} from '../review/review.controller';
 
 async function productRoutes(fastify: FastifyInstance) {
   // Get all products - GET /api/products (public route with pagination)
@@ -81,6 +87,52 @@ async function productRoutes(fastify: FastifyInstance) {
       },
     },
     deleteProductHandler
+  );
+
+  // Get all reviews for a product - GET /api/products/:id/reviews (public route with pagination)
+  fastify.get(
+    '/:id/reviews',
+    {
+      schema: {
+        params: $refReview('productParamsSchema'),
+        querystring: $refReview('reviewQuerySchema'),
+        response: {
+          200: $refReview('reviewListResponseSchema'),
+        },
+      },
+    },
+    getProductReviewsHandler
+  );
+
+  // Create review for a product - POST /api/products/:id/reviews (protected route)
+  fastify.post(
+    '/:id/reviews',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        params: $refReview('productParamsSchema'),
+        body: $refReview('createReviewSchema'),
+        response: {
+          201: $refReview('reviewResponseSchema'),
+        },
+      },
+    },
+    createReviewHandler
+  );
+
+  // Delete review - DELETE /api/products/:product_id/reviews/:review_id (protected route, author only)
+  fastify.delete(
+    '/:product_id/reviews/:review_id',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        params: $refReview('deleteReviewParamsSchema'),
+        response: {
+          204: {},
+        },
+      },
+    },
+    deleteReviewHandler
   );
 }
 
