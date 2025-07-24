@@ -103,7 +103,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: frontend-build
-        path: frontend
+        path: frontend/dist
 
     - name: Create deployment package
       run: |
