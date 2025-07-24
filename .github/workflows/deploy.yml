@@ -50,6 +50,7 @@ jobs:
             backend/node_modules
             backend/package.json
             backend/prisma
+          retention-days: 1
 
   frontend:
     runs-on: ubuntu-latest
@@ -81,6 +82,7 @@ jobs:
         with:
           name: frontend-build
           path: frontend/dist
+          retention-days: 1
 
   deploy-preprod:
     needs: [backend, frontend]
@@ -97,26 +99,26 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: backend-build
-        path: backend
+        path: backend-artifacts
 
     - name: Download frontend artifacts
       uses: actions/download-artifact@v4
       with:
         name: frontend-build
-        path: frontend/dist
+        path: frontend-artifacts
 
     - name: Create deployment package
       run: |
         mkdir -p deploy
         
-        # Backend files
-        cp -r backend/dist deploy/
-        cp -r backend/node_modules deploy/
-        cp backend/package.json deploy/
-        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        # Backend files (artifacts are downloaded with the backend/ prefix)
+        cp -r backend-artifacts/backend/dist deploy/
+        cp -r backend-artifacts/backend/node_modules deploy/
+        cp backend-artifacts/backend/package.json deploy/
+        cp -r backend-artifacts/backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
         
         # Frontend files
-        cp -r frontend/dist deploy/frontend
+        cp -r frontend-artifacts deploy/frontend
         
         # Configuration files
         cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
@@ -252,26 +254,26 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: backend-build
-        path: backend
+        path: backend-artifacts
 
     - name: Download frontend artifacts
       uses: actions/download-artifact@v4
       with:
         name: frontend-build
-        path: frontend
+        path: frontend-artifacts
 
     - name: Create deployment package
       run: |
         mkdir -p deploy
         
-        # Backend files
-        cp -r backend/dist deploy/
-        cp -r backend/node_modules deploy/
-        cp backend/package.json deploy/
-        cp -r backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
+        # Backend files (artifacts are downloaded with the backend/ prefix)
+        cp -r backend-artifacts/backend/dist deploy/
+        cp -r backend-artifacts/backend/node_modules deploy/
+        cp backend-artifacts/backend/package.json deploy/
+        cp -r backend-artifacts/backend/prisma deploy/ 2>/dev/null || echo "No Prisma folder"
         
         # Frontend files
-        cp -r frontend/dist deploy/frontend
+        cp -r frontend-artifacts deploy/frontend
         
         # Configuration files
         cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
