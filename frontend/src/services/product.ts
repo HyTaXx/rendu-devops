@@ -3,8 +3,6 @@ import { API_CONFIG } from "@/config/api";
 import type {
   Product,
   ProductListResponse,
-  CreateProductData,
-  UpdateProductData,
   ProductQueryParams,
 } from "@/types/product";
 

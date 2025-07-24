@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { productService } from "@/services/product";
 import { useAuth } from "@/hooks/useAuth";
-import type { CreateProductData, UpdateProductData } from "@/types/product";
+import type { CreateProductData } from "@/types/product";
 
 function ProductForm() {
   const { id } = useParams<{ id: string }>();

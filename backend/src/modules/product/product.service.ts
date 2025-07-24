@@ -12,7 +12,7 @@ async function calculateAverageRating(productId: string): Promise<number | null>
     return null;
   }
 
-  const sum = ratings.reduce((acc, review) => acc + review.rating, 0);
+  const sum = ratings.reduce((acc: number, review: { rating: number }) => acc + review.rating, 0);
   return Math.round((sum / ratings.length) * 10) / 10; // Round to 1 decimal place
 }
 
@@ -91,7 +91,7 @@ export async function findProducts(
 
   // Add average rating to each product
   const productsWithRating = await Promise.all(
-    products.map(async (product) => ({
+    products.map(async (product: any) => ({
       ...product,
       averageRating: await calculateAverageRating(product.id),
     }))
