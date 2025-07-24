@@ -10,80 +10,14 @@ on:
       - main
       - staging
 
+
 env:
   NODE_VERSION: '18'
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    name: Backend Build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          npm ci --legacy-peer-deps
-
-      - name: Build backend
-        run: |
-          cd backend
-          npm run build
-
-      - name: Upload backend artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-build
-          path: |
-            backend/dist
-            backend/node_modules
-            backend/package.json
-            backend/prisma
-
-  frontend:
-    runs-on: ubuntu-latest
-    name: Frontend Build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci --legacy-peer-deps
-
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-
-      - name: Upload frontend artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/dist
-
   deploy-preprod:
-    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    name: Deploy to PREPROD
+    name: Build and Deploy to PREPROD
     if: github.ref == 'refs/heads/staging'
     environment: preprod
     
@@ -91,17 +25,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download backend artifacts
-      uses: actions/download-artifact@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        name: backend-build
-        path: backend
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
-    - name: Download frontend artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend
+    - name: Install and build backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Install and build frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
 
     - name: Create deployment package
       run: |
@@ -117,11 +60,7 @@ jobs:
         cp -r frontend/dist deploy/frontend
         
         # Configuration files
-        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
         cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
-        
-        # Make scripts executable
-        chmod +x deploy/*.sh 2>/dev/null || true
 
     - name: Create deployment archive
       run: tar -czf deployment.tar.gz -C deploy .
@@ -176,6 +115,17 @@ jobs:
           
           # Navigation vers le répertoire app
           cd "$APP_DIR"
+          
+          # Vérification et installation de Node.js si nécessaire
+          echo "🔍 Vérification de Node.js..."
+          if ! command -v node &> /dev/null; then
+            echo "📦 Installation de Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs || sudo dnf install -y nodejs npm
+          fi
+          
+          echo "✅ Node.js version: $(node --version)"
+          echo "✅ NPM version: $(npm --version)"
           
           # Configuration des variables d'environnement
           echo "🔧 Configuration des variables d'environnement..."
@@ -236,9 +186,8 @@ jobs:
           sudo systemctl status nginx --no-pager || echo "Nginx: non configuré"
 
   deploy-prod:
-    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    name: Deploy to PRODUCTION
+    name: Build and Deploy to PRODUCTION
     if: github.ref == 'refs/heads/main'
     environment: production
     
@@ -246,17 +195,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download backend artifacts
-      uses: actions/download-artifact@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        name: backend-build
-        path: backend
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
-    - name: Download frontend artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend
+    - name: Install and build backend
+      run: |
+        cd backend
+        npm ci --legacy-peer-deps
+        npm run build
+
+    - name: Install and build frontend
+      run: |
+        cd frontend
+        npm ci --legacy-peer-deps
+        npm run build
 
     - name: Create deployment package
       run: |
@@ -272,11 +230,7 @@ jobs:
         cp -r frontend/dist deploy/frontend
         
         # Configuration files
-        cp scripts/*.sh deploy/ 2>/dev/null || echo "No scripts folder"
         cp nginx.conf deploy/ 2>/dev/null || echo "No nginx.conf"
-        
-        # Make scripts executable
-        chmod +x deploy/*.sh 2>/dev/null || true
 
     - name: Create deployment archive
       run: tar -czf deployment.tar.gz -C deploy .
@@ -331,6 +285,17 @@ jobs:
           
           # Navigation vers le répertoire app
           cd "$APP_DIR"
+          
+          # Vérification et installation de Node.js si nécessaire
+          echo "🔍 Vérification de Node.js..."
+          if ! command -v node &> /dev/null; then
+            echo "📦 Installation de Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs || sudo dnf install -y nodejs npm
+          fi
+          
+          echo "✅ Node.js version: $(node --version)"
+          echo "✅ NPM version: $(npm --version)"
           
           # Configuration des variables d'environnement
           echo "🔧 Configuration des variables d'environnement..."
